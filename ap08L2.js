@@ -19,6 +19,8 @@ let course;
 export const origin = new THREE.Vector3();
 export const controlPoints = [
     [ 50,-20],
+    [ 30, 20],
+    [-10, 30],
     [-25, 40]
 ]
 export function init(scene, size, id, offset, texture) {
@@ -48,7 +50,32 @@ export function init(scene, size, id, offset, texture) {
     // ビル
 
     // コース(描画)
+    course = new THREE.CatmullRomCurve3(
+        controlPoints.map((p) => {
+            return (new THREE.Vector3()).set(
+                offset.x + p[0],
+                0,
+                offset.z + p[1]
+            );
+        }), false
+    )
 
+    const points = course.getPoints(100);
+    points.forEach((point) => {
+        const road = new THREE.Mesh(
+            new THREE.CircleGeometry(5, 16),
+            new THREE.MeshLambertMaterial({
+                color: "gray",
+            })
+        )
+        road.rotateX(-Math.PI/2);
+        road.position.set(
+            point.x,
+            0,
+            point.z
+        );
+        scene.add(road);
+    });
 }
 
 // コース(自動運転用)
@@ -62,6 +89,10 @@ export function getCamera() {
 
 // 車の設定
 export function setCar(scene, car) {
+    const SCALE = 0.01;
+    car.position.copy(origin);
+    car.scale.set(SCALE, SCALE, SCALE);
+    scene.add(car);
 }
 
 // Windowサイズの変更処理
@@ -72,7 +103,17 @@ export function resize() {
 }
 
 // 描画処理
+const clock = new THREE.Clock();
+const carPostion = new THREE.Vector3();
+const carTarget = new THREE.Vector3();
 export function render(scene, car) {
+    const time = (clock.getElapsedTime()/20);
+    course.getPointAt(time % 1, carPostion);
+    car.position.copy(carPostion);
+    course.getPointAt((time + 0.01) % 1,carTarget);
+    car.lookAt(carTarget);
     camera.lookAt(car.position.x, car.position.y, car.position.z);
     renderer.render(scene, camera);
+
+    
 }
